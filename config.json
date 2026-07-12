@@ -1,0 +1,16 @@
+{
+    "api_url": "https://www.luvbree.com/api/image/random",
+    "api_params": {
+        "categoryId": "1927377837329715201",
+        "isNsfw": "true",
+        "isLandscape": "true",
+        "type": "3",
+        "imageType": "compressed"
+    },
+    "interval_minutes": 1440,
+    "cache_dir": "D:/壁纸/Wallpapers",
+    "max_cache_count": 100,
+    "auto_start": true,
+    "enable_notification": true,
+    "fit_mode": "fill"
+}
