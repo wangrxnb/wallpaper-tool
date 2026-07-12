@@ -67,6 +67,14 @@ def _make_interval_label(minutes: int) -> str:
     return f"{hours} 小时 {minutes % 60} 分钟"
 
 
+def _category_name(category_id: str) -> str:
+    """将分类 ID 转为显示名称"""
+    for cid, name in CATEGORY_OPTIONS:
+        if cid == category_id:
+            return name
+    return "未知"
+
+
 INTERVAL_OPTIONS = [
     (0, "关闭"),
     (30, "30 分钟"),
@@ -74,6 +82,13 @@ INTERVAL_OPTIONS = [
     (360, "6 小时"),
     (720, "12 小时"),
     (1440, "24 小时"),
+]
+
+CATEGORY_OPTIONS = [
+    ("1927377837329715201", "动漫"),
+    ("1937566978279546881", "游戏"),
+    ("1927379887438401537", "写真"),
+    ("1934177908254789634", "cosplay"),
 ]
 
 
@@ -133,6 +148,14 @@ class WallpaperTray:
                 pystray.Menu(*self._build_interval_submenu()),
             ),
 
+            # ── 分类选择子菜单 ──
+            pystray.MenuItem(
+                self._get_category_label(),
+                pystray.Menu(*self._build_category_submenu()),
+            ),
+
+            pystray.Menu.SEPARATOR,
+
             # ── 收藏 ──
             pystray.MenuItem(
                 "⭐  收藏当前壁纸",
@@ -178,6 +201,21 @@ class WallpaperTray:
             ))
         return items
 
+    def _build_category_submenu(self):
+        """构建分类选择子菜单"""
+        import pystray
+
+        current = self._core.category_id
+
+        items = []
+        for category_id, name in CATEGORY_OPTIONS:
+            prefix = "●" if category_id == current else "○"
+            items.append(pystray.MenuItem(
+                f"{prefix}  {name}",
+                self._make_category_callback(category_id),
+            ))
+        return items
+
     def _make_interval_callback(self, minutes: int):
         """生成间隔选择的回调（闭包捕获 minutes）"""
         def callback(icon, item):
@@ -191,6 +229,16 @@ class WallpaperTray:
                     self._core.reset_timer()
             self.notify("壁纸小工具", f"自动切换: {_make_interval_label(minutes)}")
             self._refresh_menu(icon)
+        return callback
+
+    def _make_category_callback(self, category_id: str):
+        """生成分类选择的回调（闭包捕获 category_id）"""
+        def callback(icon, item):
+            self._core.category_id = category_id          # 更新并持久化
+            self._refresh_menu(icon)                      # 立即刷新 UI
+            name = _category_name(category_id)
+            self.notify("壁纸小工具", f"分类已切换: {name}")
+            threading.Thread(target=self._do_switch, args=(icon,), daemon=True).start()
         return callback
 
     # ── 菜单回调 ──────────────────────────────────────
@@ -220,7 +268,7 @@ class WallpaperTray:
 
     def _on_open_cache_dir(self, icon, item):
         """打开壁纸文件夹"""
-        cache_dir = self._core.cache_dir
+        cache_dir = os.path.normpath(self._core.cache_dir)
         if os.path.isdir(cache_dir):
             subprocess.Popen(["explorer", cache_dir])
         else:
@@ -251,6 +299,12 @@ class WallpaperTray:
         """获取开机自启菜单项标签"""
         state = "☑ 开机自启" if self._core.auto_start else "☐ 开机自启"
         return state
+
+    def _get_category_label(self) -> str:
+        """获取分类选择菜单项的标签"""
+        current_id = self._core.category_id
+        name = _category_name(current_id)
+        return f"🎨  分类: {name}"
 
     def _refresh_menu(self, icon) -> None:
         """刷新托盘菜单（更新选中状态）"""

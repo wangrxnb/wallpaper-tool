@@ -29,7 +29,7 @@ class WallpaperCore:
 
         # 缓存目录
         cache_dir = self._config.get("cache_dir") or _default_cache_dir()
-        self._cache_dir = os.path.expandvars(os.path.expanduser(cache_dir))
+        self._cache_dir = os.path.normpath(os.path.expandvars(os.path.expanduser(cache_dir)))
         os.makedirs(self._cache_dir, exist_ok=True)
 
         # 收藏目录
@@ -79,6 +79,19 @@ class WallpaperCore:
         self._config["auto_start"] = enabled
         self.save_config()
         _set_autostart(enabled)
+
+    @property
+    def category_id(self) -> str:
+        """当前选中的分类 ID"""
+        return self._config.get("api_params", {}).get("categoryId", "")
+
+    @category_id.setter
+    def category_id(self, value: str) -> None:
+        """更新分类 ID 并持久化"""
+        if "api_params" not in self._config:
+            self._config["api_params"] = {}
+        self._config["api_params"]["categoryId"] = value
+        self.save_config()
 
     @property
     def is_auto_running(self) -> bool:
